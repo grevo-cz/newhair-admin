@@ -8,6 +8,7 @@ import type {
   PhaseReference,
   HeroColor,
   DangerItem,
+  LibraryComponent,
 } from '@/types';
 
 interface State {
@@ -37,6 +38,7 @@ export const usePlansStore = defineStore('plans', {
       this.items = {};
       this.order = [];
       for (const t of items) {
+        if (!Array.isArray(t.library)) t.library = [];
         this.items[t.id] = t;
         this.order.push(t.id);
       }
@@ -70,10 +72,190 @@ export const usePlansStore = defineStore('plans', {
         description: input.description,
         isDefault: input.isDefault ?? false,
         phases: input.phases ?? [],
+        library: input.library ?? [],
       };
       this.items[t.id] = t;
       this.order.unshift(t.id);
       return t;
+    },
+
+    // ── Component library (master components) ──
+    library(templateId: string): LibraryComponent[] {
+      return this.items[templateId]?.library ?? [];
+    },
+
+    libraryById(templateId: string, libraryId: string | null | undefined): LibraryComponent | undefined {
+      if (!libraryId) return undefined;
+      return this.items[templateId]?.library.find((l) => l.id === libraryId);
+    },
+
+    /** Count of instances referencing the given master across all phases/cards. */
+    libraryUsageCount(templateId: string, libraryId: string): number {
+      const t = this.items[templateId];
+      if (!t) return 0;
+      let n = 0;
+      for (const ph of t.phases)
+        for (const c of ph.dayCards)
+          for (const comp of c.components)
+            if (comp.libraryId === libraryId) n++;
+      return n;
+    },
+
+    createLibraryComponent(
+      templateId: string,
+      input: Partial<LibraryComponent> & { name: string; type: ComponentType },
+    ): LibraryComponent | undefined {
+      const t = this.items[templateId];
+      if (!t) return;
+      const lib: LibraryComponent = {
+        id: crypto.randomUUID(),
+        templateId,
+        type: input.type,
+        name: input.name,
+        shortDescription: input.shortDescription,
+        hasDetail: input.hasDetail ?? false,
+        detailRichtext: input.detailRichtext,
+        icon: input.icon ?? defaultIconForType(input.type),
+        requiresCompletion: input.requiresCompletion ?? false,
+        requiresPhoto: input.requiresPhoto ?? false,
+        timeOfDay: input.timeOfDay,
+        pointsForCompletion: input.pointsForCompletion ?? 0,
+        notification: input.notification,
+        dangerItems: input.dangerItems,
+        videoId: input.videoId,
+        externalLink: input.externalLink,
+      };
+      t.library.push(lib);
+      return lib;
+    },
+
+    updateLibraryComponent(templateId: string, libraryId: string, patch: Partial<LibraryComponent>) {
+      const t = this.items[templateId];
+      const lib = t?.library.find((l) => l.id === libraryId);
+      if (!lib) return;
+      Object.assign(lib, patch);
+    },
+
+    /** Delete a library component — all instances are detached (copied → local). */
+    removeLibraryComponent(templateId: string, libraryId: string) {
+      const t = this.items[templateId];
+      if (!t) return;
+      const lib = t.library.find((l) => l.id === libraryId);
+      if (!lib) return;
+      // Detach all instances first
+      for (const ph of t.phases)
+        for (const c of ph.dayCards)
+          for (const comp of c.components)
+            if (comp.libraryId === libraryId) this.applyLibraryToInstance(comp, lib, { detach: true });
+      t.library = t.library.filter((l) => l.id !== libraryId);
+    },
+
+    /** Create a new instance in a given day card, linked to a library component. */
+    instantiateFromLibrary(
+      templateId: string,
+      phaseId: string,
+      cardId: string,
+      libraryId: string,
+    ): ComponentItem | undefined {
+      const t = this.items[templateId];
+      const lib = t?.library.find((l) => l.id === libraryId);
+      const card = t?.phases.find((p) => p.id === phaseId)?.dayCards.find((c) => c.id === cardId);
+      if (!t || !lib || !card) return;
+      const instance: ComponentItem = {
+        id: crypto.randomUUID(),
+        dayCardId: cardId,
+        libraryId: lib.id,
+        type: lib.type,
+        name: lib.name,
+        shortDescription: lib.shortDescription,
+        hasDetail: lib.hasDetail,
+        detailRichtext: lib.detailRichtext,
+        icon: lib.icon,
+        requiresCompletion: lib.requiresCompletion,
+        requiresPhoto: lib.requiresPhoto,
+        timeOfDay: lib.timeOfDay,
+        pointsForCompletion: lib.pointsForCompletion,
+        order: card.components.length,
+        notification: lib.notification ? { ...lib.notification } : undefined,
+        dangerItems: lib.dangerItems ? lib.dangerItems.map((d) => ({ ...d })) : undefined,
+        videoId: lib.videoId,
+        externalLink: lib.externalLink,
+      };
+      card.components.push(instance);
+      return instance;
+    },
+
+    /** Promote a local component into the library and link the current one to it. */
+    saveComponentToLibrary(
+      templateId: string,
+      phaseId: string,
+      cardId: string,
+      componentId: string,
+    ): LibraryComponent | undefined {
+      const comp = findComponent(this.items, templateId, phaseId, cardId, componentId);
+      if (!comp || comp.libraryId) return;
+      const lib = this.createLibraryComponent(templateId, {
+        type: comp.type,
+        name: comp.name,
+        shortDescription: comp.shortDescription,
+        hasDetail: comp.hasDetail,
+        detailRichtext: comp.detailRichtext,
+        icon: comp.icon,
+        requiresCompletion: comp.requiresCompletion,
+        requiresPhoto: comp.requiresPhoto,
+        timeOfDay: comp.timeOfDay,
+        pointsForCompletion: comp.pointsForCompletion,
+        notification: comp.notification ? { ...comp.notification } : undefined,
+        dangerItems: comp.dangerItems ? comp.dangerItems.map((d) => ({ ...d })) : undefined,
+        videoId: comp.videoId,
+        externalLink: comp.externalLink,
+      });
+      if (lib) comp.libraryId = lib.id;
+      return lib;
+    },
+
+    /** Detach an instance — its fields remain local, library link is removed. */
+    detachFromLibrary(templateId: string, phaseId: string, cardId: string, componentId: string) {
+      const comp = findComponent(this.items, templateId, phaseId, cardId, componentId);
+      if (!comp) return;
+      comp.libraryId = null;
+    },
+
+    /**
+     * Propagate library values to a specific instance (used internally on delete).
+     * If `detach = true`, clears the libraryId after copying.
+     */
+    applyLibraryToInstance(
+      instance: ComponentItem,
+      lib: LibraryComponent,
+      opts: { detach?: boolean } = {},
+    ) {
+      instance.type = lib.type;
+      instance.name = lib.name;
+      instance.shortDescription = lib.shortDescription;
+      instance.hasDetail = lib.hasDetail;
+      instance.detailRichtext = lib.detailRichtext;
+      instance.icon = lib.icon;
+      instance.requiresCompletion = lib.requiresCompletion;
+      instance.requiresPhoto = lib.requiresPhoto;
+      instance.timeOfDay = lib.timeOfDay;
+      instance.pointsForCompletion = lib.pointsForCompletion;
+      instance.notification = lib.notification ? { ...lib.notification } : undefined;
+      instance.dangerItems = lib.dangerItems ? lib.dangerItems.map((d) => ({ ...d })) : undefined;
+      instance.videoId = lib.videoId;
+      instance.externalLink = lib.externalLink;
+      if (opts.detach) instance.libraryId = null;
+    },
+
+    /** Called after updating a master: pushes new values to every instance. */
+    propagateLibraryUpdate(templateId: string, libraryId: string) {
+      const t = this.items[templateId];
+      const lib = t?.library.find((l) => l.id === libraryId);
+      if (!t || !lib) return;
+      for (const ph of t.phases)
+        for (const c of ph.dayCards)
+          for (const comp of c.components)
+            if (comp.libraryId === libraryId) this.applyLibraryToInstance(comp, lib);
     },
 
     clone(id: string): PlanTemplate | undefined {
@@ -83,9 +265,17 @@ export const usePlansStore = defineStore('plans', {
       json.id = crypto.randomUUID();
       json.name = `${src.name} (kopie)`;
       json.isDefault = false;
+      if (!Array.isArray(json.library)) json.library = [];
+      // Remap library ids so instances continue to reference the clone's library
+      const libraryIdMap: Record<string, string> = {};
+      for (const lib of json.library) {
+        const newId = crypto.randomUUID();
+        libraryIdMap[lib.id] = newId;
+        lib.id = newId;
+        lib.templateId = json.id;
+      }
       // re-id nested
       for (const ph of json.phases) {
-        const oldPhaseId = ph.id;
         ph.id = crypto.randomUUID();
         ph.templateId = json.id;
         for (const c of ph.dayCards) {
@@ -94,12 +284,14 @@ export const usePlansStore = defineStore('plans', {
           for (const comp of c.components) {
             comp.dayCardId = c.id;
             comp.id = crypto.randomUUID();
+            if (comp.libraryId && libraryIdMap[comp.libraryId]) {
+              comp.libraryId = libraryIdMap[comp.libraryId];
+            }
             if (comp.dangerItems) {
               comp.dangerItems = comp.dangerItems.map((d) => ({ ...d, id: crypto.randomUUID() }));
             }
           }
         }
-        void oldPhaseId;
       }
       this.items[json.id] = json;
       this.order.unshift(json.id);
@@ -244,6 +436,7 @@ export const usePlansStore = defineStore('plans', {
       const comp: ComponentItem = {
         id: crypto.randomUUID(),
         dayCardId: cardId,
+        libraryId: input.libraryId ?? null,
         type: input.type,
         name: input.name,
         shortDescription: input.shortDescription,

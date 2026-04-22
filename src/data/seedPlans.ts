@@ -1,4 +1,4 @@
-import type { PlanTemplate, PlanPhase, DayCard, ComponentItem } from '@/types';
+import type { PlanTemplate, PlanPhase, DayCard, ComponentItem, LibraryComponent } from '@/types';
 
 function phase(overrides: Partial<PlanPhase>): PlanPhase {
   return {
@@ -43,8 +43,94 @@ function comp(overrides: Partial<ComponentItem>): ComponentItem {
   };
 }
 
+function lib(overrides: Partial<LibraryComponent> & { id: string; name: string }, templateId: string): LibraryComponent {
+  return {
+    templateId,
+    type: 'instrukce',
+    hasDetail: false,
+    icon: 'check',
+    requiresCompletion: true,
+    requiresPhoto: false,
+    pointsForCompletion: 10,
+    ...overrides,
+  } as LibraryComponent;
+}
+
 function buildDhiTemplate(): PlanTemplate {
   const templateId = 'plan-dhi';
+
+  // ── Master components (component library) ──
+  const library: LibraryComponent[] = [
+    lib({
+      id: 'lib-dhi-rano-leky',
+      name: 'Ranní léky',
+      shortDescription: 'Antibiotika + antihistaminikum podle rozpisu.',
+      icon: 'pill',
+      type: 'instrukce',
+      requiresCompletion: true,
+      timeOfDay: 'rano',
+      pointsForCompletion: 10,
+      notification: { enabled: true, time: '08:00', text: 'Čas na ranní léky 💊', actionType: 'detail' },
+    }, templateId),
+    lib({
+      id: 'lib-dhi-vecer-leky',
+      name: 'Večerní léky',
+      icon: 'pill',
+      type: 'instrukce',
+      requiresCompletion: true,
+      timeOfDay: 'vecer',
+      pointsForCompletion: 10,
+      notification: { enabled: true, time: '20:00', actionType: 'detail' },
+    }, templateId),
+    lib({
+      id: 'lib-dhi-myti',
+      name: 'Denní mytí hlavy',
+      shortDescription: 'Jemně, bez tření, podle videa.',
+      icon: 'droplets',
+      type: 'instrukce',
+      hasDetail: true,
+      detailRichtext:
+        '## Postup mytí\n\n1. Naředěný šampon aplikuj rukou, nepouštěj sprchu přímo\n2. Pěn jemně bříšky prstů\n3. Opláchni vlažnou vodou z hrnečku\n4. Nech uschnout na vzduchu',
+      requiresCompletion: true,
+      timeOfDay: 'dopoledne',
+      pointsForCompletion: 10,
+      videoId: 'video-myti',
+      notification: { enabled: true, time: '09:30', text: 'Čas na mytí hlavy 🚿', actionType: 'detail' },
+    }, templateId),
+    lib({
+      id: 'lib-dhi-spanek',
+      name: 'Spánek polosedě 45°',
+      shortDescription: 'Používej cestovní polštář, nemáčkni transplantovanou oblast.',
+      icon: 'moon',
+      type: 'instrukce',
+      requiresCompletion: true,
+      timeOfDay: 'noc',
+      pointsForCompletion: 10,
+    }, templateId),
+    lib({
+      id: 'lib-dhi-foto-pokrok',
+      name: 'Foto pokroku',
+      shortDescription: 'Pořiď fotku ze 4 úhlů pro dokumentaci.',
+      icon: 'camera',
+      type: 'instrukce',
+      requiresCompletion: true,
+      requiresPhoto: true,
+      timeOfDay: 'dopoledne',
+      pointsForCompletion: 50,
+    }, templateId),
+    lib({
+      id: 'lib-dhi-info-normalni',
+      name: 'To je normální!',
+      shortDescription: 'Otok, svědění a stroupky jsou součást hojení.',
+      icon: 'info',
+      type: 'info',
+      hasDetail: true,
+      detailRichtext:
+        'V prvních dnech je běžný **otok čela a obličeje**, lehké svědění a vznik stroupků. Spi polosedě 45°, nepřikrývej si hlavu přímo polštářem.',
+      requiresCompletion: false,
+      pointsForCompletion: 0,
+    }, templateId),
+  ];
 
   const pPred = phase({
     id: 'phase-dhi-pred',
@@ -298,19 +384,22 @@ function buildDhiTemplate(): PlanTemplate {
     components: [
       comp({
         id: 'comp-pobyt-7',
+        libraryId: 'lib-dhi-info-normalni',
         type: 'info',
         name: 'To je normální!',
-        shortDescription: 'Otok čela, stroupky a lehké svědění.',
+        shortDescription: 'Otok, svědění a stroupky jsou součást hojení.',
         icon: 'info',
         hasDetail: true,
         detailRichtext:
-          'V den 1–3 je běžný **otok čela a obličeje**, lehké svědění a vznik stroupků. Spi polosedě 45°, nepřikrývej si hlavu přímo polštářem.',
+          'V prvních dnech je běžný **otok čela a obličeje**, lehké svědění a vznik stroupků. Spi polosedě 45°, nepřikrývej si hlavu přímo polštářem.',
         order: 0,
       }),
       comp({
         id: 'comp-pobyt-8',
+        libraryId: 'lib-dhi-rano-leky',
         type: 'instrukce',
         name: 'Ranní léky',
+        shortDescription: 'Antibiotika + antihistaminikum podle rozpisu.',
         icon: 'pill',
         hasDetail: false,
         requiresCompletion: true,
@@ -321,8 +410,10 @@ function buildDhiTemplate(): PlanTemplate {
       }),
       comp({
         id: 'comp-pobyt-9',
+        libraryId: 'lib-dhi-spanek',
         type: 'instrukce',
         name: 'Spánek polosedě 45°',
+        shortDescription: 'Používej cestovní polštář, nemáčkni transplantovanou oblast.',
         icon: 'moon',
         hasDetail: false,
         requiresCompletion: true,
@@ -358,6 +449,7 @@ function buildDhiTemplate(): PlanTemplate {
     components: [
       comp({
         id: 'comp-po-1',
+        libraryId: 'lib-dhi-myti',
         type: 'instrukce',
         name: 'Denní mytí hlavy',
         shortDescription: 'Jemně, bez tření, podle videa.',
@@ -374,6 +466,7 @@ function buildDhiTemplate(): PlanTemplate {
       }),
       comp({
         id: 'comp-po-2',
+        libraryId: 'lib-dhi-vecer-leky',
         type: 'instrukce',
         name: 'Večerní léky',
         icon: 'pill',
@@ -405,8 +498,10 @@ function buildDhiTemplate(): PlanTemplate {
     components: [
       comp({
         id: 'comp-po-4',
+        libraryId: 'lib-dhi-foto-pokrok',
         type: 'instrukce',
-        name: 'Foto pokroku — týden doma',
+        name: 'Foto pokroku',
+        shortDescription: 'Pořiď fotku ze 4 úhlů pro dokumentaci.',
         icon: 'camera',
         hasDetail: false,
         requiresCompletion: true,
@@ -470,8 +565,10 @@ function buildDhiTemplate(): PlanTemplate {
     components: [
       comp({
         id: 'comp-po-8',
+        libraryId: 'lib-dhi-foto-pokrok',
         type: 'instrukce',
-        name: 'Foto pokroku — měsíc 1',
+        name: 'Foto pokroku',
+        shortDescription: 'Pořiď fotku ze 4 úhlů pro dokumentaci.',
         icon: 'camera',
         hasDetail: false,
         requiresCompletion: true,
@@ -527,11 +624,33 @@ function buildDhiTemplate(): PlanTemplate {
     description: 'Výchozí plán pro DHI zákrok — 3 fáze, 11 karet dní, 26 komponent.',
     isDefault: true,
     phases: [pPred, pPobyt, pPo],
+    library,
   };
 }
 
 function buildFueTemplate(): PlanTemplate {
   const templateId = 'plan-fue';
+  const library: LibraryComponent[] = [
+    lib({
+      id: 'lib-fue-rano-leky',
+      name: 'Ranní léky',
+      shortDescription: 'Podle rozpisu kliniky.',
+      icon: 'pill',
+      type: 'instrukce',
+      requiresCompletion: true,
+      timeOfDay: 'rano',
+      pointsForCompletion: 10,
+    }, templateId),
+    lib({
+      id: 'lib-fue-myti',
+      name: 'Denní mytí hlavy',
+      icon: 'droplets',
+      type: 'instrukce',
+      requiresCompletion: true,
+      timeOfDay: 'dopoledne',
+      pointsForCompletion: 10,
+    }, templateId),
+  ];
   const pPred = phase({
     id: 'phase-fue-pred',
     templateId,
@@ -598,8 +717,10 @@ function buildFueTemplate(): PlanTemplate {
       components: [
         comp({
           id: 'comp-fue-pobyt-1',
+          libraryId: 'lib-fue-rano-leky',
           type: 'instrukce',
           name: 'Ranní léky',
+          shortDescription: 'Podle rozpisu kliniky.',
           icon: 'pill',
           hasDetail: false,
           requiresCompletion: true,
@@ -622,6 +743,7 @@ function buildFueTemplate(): PlanTemplate {
       components: [
         comp({
           id: 'comp-fue-po-1',
+          libraryId: 'lib-fue-myti',
           type: 'instrukce',
           name: 'Denní mytí hlavy',
           icon: 'droplets',
@@ -642,6 +764,7 @@ function buildFueTemplate(): PlanTemplate {
     description: 'Plán pro FUE zákrok.',
     isDefault: false,
     phases: [pPred, pPobyt, pPo],
+    library,
   };
 }
 

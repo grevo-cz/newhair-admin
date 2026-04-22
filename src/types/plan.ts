@@ -17,6 +17,30 @@ export interface PlanTemplate {
   description?: string;
   isDefault: boolean;
   phases: PlanPhase[];
+  library: LibraryComponent[];
+}
+
+/**
+ * Master definition of a component — like a Figma component.
+ * Instances referenced from a DayCard via ComponentItem.libraryId share values.
+ */
+export interface LibraryComponent {
+  id: string;
+  templateId: string;
+  type: ComponentType;
+  name: string;
+  shortDescription?: string;
+  hasDetail: boolean;
+  detailRichtext?: string;
+  icon: string;
+  requiresCompletion: boolean;
+  requiresPhoto: boolean;
+  timeOfDay?: TimeOfDay;
+  pointsForCompletion: number;
+  notification?: ComponentNotification;
+  dangerItems?: DangerItem[];
+  videoId?: string;
+  externalLink?: string;
 }
 
 export interface PlanPhase {
@@ -67,6 +91,12 @@ export const TIME_OF_DAY_LABELS: Record<TimeOfDay, string> = {
 export interface ComponentItem {
   id: string;
   dayCardId: string;
+  /**
+   * If set, this is an instance of a LibraryComponent — its values
+   * are resolved from the library (like a Figma component instance).
+   * If null, component holds its own values locally.
+   */
+  libraryId?: string | null;
   type: ComponentType;
   name: string;
   shortDescription?: string;

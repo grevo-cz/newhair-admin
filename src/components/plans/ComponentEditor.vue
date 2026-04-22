@@ -1,22 +1,35 @@
 <script setup lang="ts">
-import { computed, reactive, watch } from 'vue';
-import type { ComponentItem, ComponentType, TimeOfDay } from '@/types';
-import { COMPONENT_TYPE_LABELS, TIME_OF_DAY_LABELS } from '@/types';
-import { PICKER_ICONS } from '@/composables/useIcon';
+import { reactive, watch } from 'vue';
+import type { ComponentItem, ComponentType, LibraryComponent } from '@/types';
+import { TIME_OF_DAY_LABELS } from '@/types';
 import AppInput from '@/components/shared/AppInput.vue';
 import AppSelect from '@/components/shared/AppSelect.vue';
 import AppTextarea from '@/components/shared/AppTextarea.vue';
 import ToggleSwitch from '@/components/shared/ToggleSwitch.vue';
 import IconPicker from '@/components/shared/IconPicker.vue';
+import Pill from '@/components/shared/Pill.vue';
+import AppButton from '@/components/shared/AppButton.vue';
 import { useVideosStore } from '@/stores/videosStore';
-import { X } from 'lucide-vue-next';
+import { Link2, Link2Off, Save, X } from 'lucide-vue-next';
 
-const props = defineProps<{ modelValue: ComponentItem }>();
-const emit = defineEmits<{ (e: 'update:modelValue', v: ComponentItem): void }>();
+const props = defineProps<{
+  modelValue: ComponentItem;
+  linkedLibrary?: LibraryComponent | null;
+  canSaveToLibrary?: boolean;
+}>();
+const emit = defineEmits<{
+  (e: 'update:modelValue', v: ComponentItem): void;
+  (e: 'detach-from-library'): void;
+  (e: 'save-to-library'): void;
+}>();
 
 const videos = useVideosStore();
 
-const form = reactive<ComponentItem>({ ...props.modelValue, dangerItems: props.modelValue.dangerItems ? [...props.modelValue.dangerItems] : undefined, notification: props.modelValue.notification ? { ...props.modelValue.notification } : undefined });
+const form = reactive<ComponentItem>({
+  ...props.modelValue,
+  dangerItems: props.modelValue.dangerItems ? [...props.modelValue.dangerItems] : undefined,
+  notification: props.modelValue.notification ? { ...props.modelValue.notification } : undefined,
+});
 
 watch(
   form,
@@ -35,7 +48,7 @@ const typeOptions: { value: ComponentType; label: string; className: string }[] 
 function addDanger() {
   const text = prompt('Text zákazu:');
   if (!text) return;
-  form.dangerItems = [...(form.dangerItems ?? []), { id: crypto.randomUUID(), text, order: (form.dangerItems?.length ?? 0) }];
+  form.dangerItems = [...(form.dangerItems ?? []), { id: crypto.randomUUID(), text, order: form.dangerItems?.length ?? 0 }];
 }
 function removeDanger(id: string) {
   form.dangerItems = (form.dangerItems ?? []).filter((d) => d.id !== id);
@@ -45,14 +58,38 @@ function toggleNotification(v: boolean) {
   if (v) {
     form.notification = form.notification ?? { enabled: true, time: '09:00', actionType: 'dashboard' };
     form.notification.enabled = true;
-  } else {
-    if (form.notification) form.notification.enabled = false;
+  } else if (form.notification) {
+    form.notification.enabled = false;
   }
 }
 </script>
 
 <template>
   <div class="space-y-4">
+    <!-- Library link banner -->
+    <div
+      v-if="linkedLibrary"
+      class="flex items-start gap-3 bg-[#EDE9FE] border border-[#DDD6FE] text-[#5B21B6] rounded-xl px-4 py-3"
+    >
+      <Link2 :size="18" class="mt-0.5 shrink-0" />
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold">Instance z knihovny</p>
+        <p class="text-xs opacity-80 mt-0.5">
+          Propojeno s masterem <strong>{{ linkedLibrary.name }}</strong>. Změny v tomto formuláři se zapíší jen do této instance — pro globální úpravu edituj master v záložce <em>Knihovna</em>.
+        </p>
+      </div>
+      <AppButton variant="ghost" size="sm" icon="link" @click="emit('detach-from-library')">Odpojit</AppButton>
+    </div>
+    <div
+      v-else-if="canSaveToLibrary"
+      class="flex items-center gap-3 bg-slate-50 border border-border-subtle rounded-xl px-4 py-2.5"
+    >
+      <span class="flex-1 text-xs text-slate-600">
+        Tato komponenta je lokální. Můžeš ji uložit do knihovny a použít ji opakovaně v jiných kartách.
+      </span>
+      <AppButton variant="secondary" size="sm" icon="save" @click="emit('save-to-library')">Uložit do knihovny</AppButton>
+    </div>
+
     <!-- Type selector -->
     <div>
       <span class="block text-sm font-medium text-slate-700 mb-2">Typ komponenty</span>
