@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useVideosStore } from '@/stores/videosStore';
 import { useUiStore } from '@/stores/uiStore';
+import { resolveIcon } from '@/composables/useIcon';
 import PageHeader from '@/components/shared/PageHeader.vue';
 import AppCard from '@/components/shared/AppCard.vue';
 import AppButton from '@/components/shared/AppButton.vue';
 import Pill from '@/components/shared/Pill.vue';
 import ToggleSwitch from '@/components/shared/ToggleSwitch.vue';
 import PhaseBadge from '@/components/shared/PhaseBadge.vue';
-import { Play, ChevronUp, ChevronDown, Pencil, Star, StarOff, Trash2 } from 'lucide-vue-next';
+import { Play, Star } from 'lucide-vue-next';
 
 const router = useRouter();
 const videos = useVideosStore();
@@ -59,16 +59,64 @@ async function remove(id: string) {
             <PhaseBadge v-for="slug in v.phaseSlugs" :key="slug" :slug="slug === 'obecne' ? undefined : slug" :label="slug === 'obecne' ? 'Obecné' : undefined" />
             <Pill v-for="t in v.tags" :key="t" size="sm">{{ t }}</Pill>
           </div>
-          <div class="flex items-center gap-2 mt-3 pt-3 border-t border-border-subtle">
-            <ToggleSwitch :model-value="v.active" @update:model-value="() => videos.toggleActive(v.id)" />
-            <AppButton variant="ghost" size="sm" icon="chevron-up" @click="videos.move(v.id, -1)" />
-            <AppButton variant="ghost" size="sm" icon="chevron-down" @click="videos.move(v.id, 1)" />
-            <AppButton variant="ghost" size="sm" :icon="v.recommended ? 'star' : 'star'" @click="videos.toggleRecommended(v.id)">
-              {{ v.recommended ? 'Odebrat doporučení' : 'Doporučit' }}
-            </AppButton>
-            <span class="flex-1" />
-            <AppButton variant="ghost" size="sm" icon="pencil" @click="router.push(`/videos/${v.id}/edit`)" />
-            <AppButton variant="ghost" size="sm" icon="trash-2" @click="remove(v.id)" />
+          <div class="mt-3 pt-3 border-t border-border-subtle space-y-2">
+            <!-- Row 1: Aktivní + Doporučené -->
+            <div class="flex items-center gap-3">
+              <ToggleSwitch
+                :model-value="v.active"
+                :title="v.active ? 'Aktivní v appce — vypnout' : 'Neaktivní — zapnout'"
+                @update:model-value="() => videos.toggleActive(v.id)"
+              />
+              <span class="text-xs text-slate-500">{{ v.active ? 'Aktivní' : 'Vypnuté' }}</span>
+              <span class="flex-1" />
+              <button
+                :class="[
+                  'inline-flex items-center gap-1 text-xs font-medium rounded-full px-2.5 py-1 transition-colors',
+                  v.recommended
+                    ? 'bg-brand-orange/15 text-[#B5660C]'
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200',
+                ]"
+                :title="v.recommended ? 'Odebrat doporučení' : 'Doporučit'"
+                @click="videos.toggleRecommended(v.id)"
+              >
+                <Star :size="12" :fill="v.recommended ? 'currentColor' : 'none'" />
+                {{ v.recommended ? 'Doporučeno' : 'Doporučit' }}
+              </button>
+            </div>
+
+            <!-- Row 2: Reorder + Edit + Delete -->
+            <div class="flex items-center gap-0.5">
+              <button
+                class="p-1.5 rounded hover:bg-slate-100 text-slate-500"
+                title="Posunout nahoru"
+                @click="videos.move(v.id, -1)"
+              >
+                <component :is="resolveIcon('chevron-up')" :size="15" />
+              </button>
+              <button
+                class="p-1.5 rounded hover:bg-slate-100 text-slate-500"
+                title="Posunout dolů"
+                @click="videos.move(v.id, 1)"
+              >
+                <component :is="resolveIcon('chevron-down')" :size="15" />
+              </button>
+              <span class="flex-1" />
+              <button
+                class="inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded px-2 py-1"
+                title="Upravit"
+                @click="router.push(`/videos/${v.id}/edit`)"
+              >
+                <component :is="resolveIcon('pencil')" :size="13" />
+                Upravit
+              </button>
+              <button
+                class="p-1.5 rounded hover:bg-[#FEF2F2] text-brand-red"
+                title="Smazat"
+                @click="remove(v.id)"
+              >
+                <component :is="resolveIcon('trash-2')" :size="15" />
+              </button>
+            </div>
           </div>
         </div>
       </AppCard>
