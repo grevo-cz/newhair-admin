@@ -1,3 +1,8 @@
+/**
+ * Messages store.
+ * TODO [backend]: sendFromAdmin() → await messagesService.sendMessage(pid, text).
+ * Realtime: subscribe to Mercure topic `messages/{patientId}` when inbox open.
+ */
 import { defineStore } from 'pinia';
 import type { Message, Thread } from '@/types';
 

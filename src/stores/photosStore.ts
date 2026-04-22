@@ -1,3 +1,7 @@
+/**
+ * Photos store. Uploady provádí PWA pacienta přímo; admin pouze čte + mění consent.
+ * TODO [backend]: setConsent → await photosService.setPhotoConsent(id, consent).
+ */
 import { defineStore } from 'pinia';
 import type { Photo, PhotoConsent } from '@/types';
 

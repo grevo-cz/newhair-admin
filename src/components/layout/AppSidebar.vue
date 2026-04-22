@@ -1,12 +1,22 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { RouterLink } from 'vue-router';
+import { RouterLink, useRouter } from 'vue-router';
 import { useMessagesStore } from '@/stores/messagesStore';
+import { useAuthStore } from '@/stores/authStore';
 import {
-  LayoutDashboard, Users, ListChecks, MessageCircle, Film, Settings,
+  LayoutDashboard, Users, ListChecks, MessageCircle, Film, Settings, LogOut,
 } from 'lucide-vue-next';
 import Avatar from '@/components/shared/Avatar.vue';
 import logoUrl from '@/assets/logo.svg';
+
+const router = useRouter();
+const auth = useAuthStore();
+const currentUser = computed(() => auth.user);
+
+async function logout() {
+  auth.logout();
+  router.push({ name: 'login' });
+}
 
 const messages = useMessagesStore();
 const unread = computed(() => messages.unreadCount);
@@ -63,11 +73,24 @@ const nav: NavItem[] = [
     <!-- Admin user -->
     <div class="px-3 pb-4">
       <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5">
-        <Avatar name="Anna Nováková" tone="orange" :size="36" />
+        <Avatar
+          :name="currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Admin'"
+          tone="orange"
+          :size="36"
+        />
         <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium truncate">Anna Nováková</p>
+          <p class="text-sm font-medium truncate">
+            {{ currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Admin' }}
+          </p>
           <p class="text-xs text-white/50 truncate">Admin CZ</p>
         </div>
+        <button
+          class="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10"
+          title="Odhlásit se"
+          @click="logout"
+        >
+          <LogOut :size="16" />
+        </button>
       </div>
     </div>
   </aside>

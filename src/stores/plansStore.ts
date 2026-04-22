@@ -1,3 +1,12 @@
+/**
+ * Plans store — drží in-memory celý strom všech PlanTemplate (+phases+dayCards
+ * +components+library). Všechny mutace jsou sync.
+ *
+ * TODO [backend]: po každém úspěšném přidání/úpravě/smazání zavolat
+ * plansService.savePlan(template) s celým stromem (tree endpoint), nebo rozdělit
+ * na granulární API (`/api/plan-phases`, `/api/day-cards`, `/api/components`).
+ * Viz docs/INTEGRATION.md a docs/BACKEND.md.
+ */
 import { defineStore } from 'pinia';
 import type {
   PlanTemplate,

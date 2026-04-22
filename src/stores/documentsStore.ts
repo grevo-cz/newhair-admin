@@ -1,3 +1,8 @@
+/**
+ * Documents store.
+ * TODO [backend]: replace uploadStub with documentsService.uploadDocument
+ * (multipart/form-data). Wire toggleVisibility / remove to services too.
+ */
 import { defineStore } from 'pinia';
 import type { DocumentFile, DocumentType } from '@/types';
 

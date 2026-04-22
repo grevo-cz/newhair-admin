@@ -1,7 +1,15 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import AdminLayout from '@/layouts/AdminLayout.vue';
+import { useAuthStore } from '@/stores/authStore';
+import { USE_MOCK_API } from '@/services/api';
 
 const routes: RouteRecordRaw[] = [
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('@/views/LoginView.vue'),
+    meta: { public: true },
+  },
   {
     path: '/',
     component: AdminLayout,
@@ -55,10 +63,38 @@ const routes: RouteRecordRaw[] = [
   },
 ];
 
-export default createRouter({
+const router = createRouter({
   history: createWebHistory('/'),
   routes,
   scrollBehavior() {
     return { top: 0 };
   },
 });
+
+/**
+ * Auth guard. In mock mode, treats the default admin as logged-in so the mockup
+ * is immediately usable without a login detour. In live mode (VITE_USE_MOCK_API=false),
+ * redirects unauthenticated users to /login.
+ *
+ * To REQUIRE login even in mock mode, flip `MOCK_AUTO_LOGIN` to false.
+ */
+const MOCK_AUTO_LOGIN = true;
+
+router.beforeEach(async (to) => {
+  const auth = useAuthStore();
+  await auth.restore();
+
+  if (USE_MOCK_API && MOCK_AUTO_LOGIN && !auth.isAuthenticated) {
+    const { STAFF } = await import('@/data/staff');
+    auth.$patch({ user: STAFF[0], bootstrapped: true });
+    return true;
+  }
+
+  if (to.meta.public) return true;
+  if (!auth.isAuthenticated) {
+    return { name: 'login', query: { redirect: to.fullPath } };
+  }
+  return true;
+});
+
+export default router;

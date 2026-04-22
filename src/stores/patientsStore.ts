@@ -1,3 +1,11 @@
+/**
+ * Patients store — in-memory cache for the mock UI. When wiring the backend:
+ *   - hydrate() je volán buď ze seedIndex.loadSeeds() (mock) nebo z
+ *     await patientsService.fetchPatients() (live, viz main.ts / router guard).
+ *   - CRUD akce dnes mutují jen paměť; pro live režim uvnitř akcí zavolej
+ *     odpovídající patientsService.* a vložím výsledek.
+ *     Viz docs/ARCHITECTURE.md — tabulka „Swap points".
+ */
 import { defineStore } from 'pinia';
 import type { Patient } from '@/types';
 
@@ -30,6 +38,7 @@ export const usePatientsStore = defineStore('patients', {
         this.order.push(p.id);
       }
     },
+    // TODO [backend]: make async and `return patientsService.createPatient(input)`
     create(input: Omit<Patient, 'id' | 'createdAt' | 'updatedAt' | 'points' | 'status'>): Patient {
       const now = new Date().toISOString();
       const p: Patient = {
@@ -44,17 +53,20 @@ export const usePatientsStore = defineStore('patients', {
       this.order.unshift(p.id);
       return p;
     },
+    // TODO [backend]: await patientsService.updatePatient(id, patch) then assign result
     update(id: string, patch: Partial<Patient>) {
       const p = this.items[id];
       if (!p) return;
       this.items[id] = { ...p, ...patch, updatedAt: new Date().toISOString() };
     },
+    // TODO [backend]: await patientsService.archivePatient(id)
     archive(id: string) {
       this.update(id, { status: 'archived' });
     },
     unarchive(id: string) {
       this.update(id, { status: 'active' });
     },
+    // TODO [backend]: await patientsService.deletePatient(id)
     remove(id: string) {
       delete this.items[id];
       this.order = this.order.filter((x) => x !== id);

@@ -1,3 +1,8 @@
+/**
+ * Settings store — singleton AppSettings.
+ * TODO [backend]: hydrate via settingsService.fetchSettings(); mutations via
+ * settingsService.updateSettings / updateWhatsAppSettings / testWhatsApp.
+ */
 import { defineStore } from 'pinia';
 import type { AppSettings, WhatsAppSettings } from '@/types';
 

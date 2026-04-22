@@ -1,3 +1,7 @@
+/**
+ * Videos store.
+ * TODO [backend]: wire CRUD actions to videosService (viz docs/ARCHITECTURE.md).
+ */
 import { defineStore } from 'pinia';
 import type { Video } from '@/types';
 
