@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { RouterLink, useRouter } from 'vue-router';
 import { usePatientsStore } from '@/stores/patientsStore';
 import { useMessagesStore } from '@/stores/messagesStore';
 import { usePhotosStore } from '@/stores/photosStore';
@@ -11,7 +12,8 @@ import Pill from '@/components/shared/Pill.vue';
 import DayBadge from '@/components/shared/DayBadge.vue';
 import Avatar from '@/components/shared/Avatar.vue';
 import AppButton from '@/components/shared/AppButton.vue';
-import { RouterLink } from 'vue-router';
+
+const router = useRouter();
 
 const patients = usePatientsStore();
 const messages = useMessagesStore();
@@ -64,7 +66,7 @@ const photosToday = computed(() => photos.recentCount(24));
         <h1 class="text-2xl font-bold text-brand-dark tracking-tight">Přehled</h1>
         <p class="text-sm text-slate-500 mt-1">Denní stav kliniky NewHair.</p>
       </div>
-      <AppButton variant="primary" icon="user-plus" :to="'/patients/new'" as="a" @click="$router.push('/patients/new')">
+      <AppButton variant="primary" icon="user-plus" @click="router.push('/patients/new')">
         Přidat pacienta
       </AppButton>
     </header>
