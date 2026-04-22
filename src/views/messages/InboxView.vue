@@ -145,7 +145,20 @@ function formatTime(iso: string): string {
             </div>
             <Pill>{{ patientDayBadge(activePatient) }}</Pill>
             <AppButton variant="secondary" size="sm" icon="user" @click="router.push(`/patients/${activePatient.id}`)">Profil</AppButton>
-            <AppButton variant="ghost" size="sm" icon="archive" @click="messages.archive(activePatient.id); router.push('/messages')">Archivovat</AppButton>
+            <AppButton
+              v-if="!activeThread.archived"
+              variant="ghost"
+              size="sm"
+              icon="archive"
+              @click="messages.archive(activePatient.id); router.push('/messages')"
+            >Archivovat</AppButton>
+            <AppButton
+              v-else
+              variant="secondary"
+              size="sm"
+              icon="repeat"
+              @click="messages.unarchive(activePatient.id); router.push(`/messages/${activePatient.id}`)"
+            >Obnovit z archivu</AppButton>
           </header>
 
           <div ref="listRef" class="flex-1 overflow-auto px-5 py-4 space-y-4 bg-[#F0F2F5]">

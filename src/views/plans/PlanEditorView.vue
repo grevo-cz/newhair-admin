@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { usePlansStore } from '@/stores/plansStore';
 import { useUiStore } from '@/stores/uiStore';
@@ -28,12 +28,25 @@ const ui = useUiStore();
 const templateId = computed(() => route.params.id as string);
 const template = computed(() => plans.byId(templateId.value));
 
-const openPhaseIds = ref<Set<string>>(new Set());
+const openPhases = ref<Record<string, boolean>>({});
 
 function togglePhase(id: string) {
-  if (openPhaseIds.value.has(id)) openPhaseIds.value.delete(id);
-  else openPhaseIds.value.add(id);
+  openPhases.value = { ...openPhases.value, [id]: !openPhases.value[id] };
 }
+function isOpen(id: string): boolean {
+  return !!openPhases.value[id];
+}
+
+// Auto-expand first phase when the template loads
+watch(
+  () => template.value?.phases?.[0]?.id,
+  (firstId) => {
+    if (firstId && openPhases.value[firstId] == null) {
+      openPhases.value = { ...openPhases.value, [firstId]: true };
+    }
+  },
+  { immediate: true },
+);
 
 // Modals
 const phaseModal = ref<{ open: boolean; name: string; relativeTo: PhaseReference; heroColor: HeroColor; icon: string; quote: string; description: string }>({
@@ -229,7 +242,7 @@ function componentCardClass(type: ComponentType): string {
       <AppCard v-for="phase in template!.phases" :key="phase.id" padding="sm">
         <div class="flex items-center gap-3 p-3">
           <button class="p-1 rounded hover:bg-slate-100 text-slate-500" @click="togglePhase(phase.id)">
-            <ChevronDown v-if="openPhaseIds.has(phase.id)" :size="18" />
+            <ChevronDown v-if="isOpen(phase.id)" :size="18" />
             <ChevronRight v-else :size="18" />
           </button>
           <component :is="resolveIcon(phase.icon)" :size="20" class="text-brand-dark" />
@@ -247,7 +260,7 @@ function componentCardClass(type: ComponentType): string {
         </div>
 
         <!-- Body -->
-        <div v-if="openPhaseIds.has(phase.id)" class="px-3 pb-3 space-y-3">
+        <div v-if="isOpen(phase.id)" class="px-3 pb-3 space-y-3">
           <div class="grid grid-cols-3 gap-3">
             <AppInput :model-value="phase.name" label="Název fáze" @update:model-value="(v) => plans.updatePhase(template!.id, phase.id, { name: v })" />
             <RadioGroup
